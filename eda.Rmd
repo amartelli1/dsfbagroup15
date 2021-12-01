@@ -1,0 +1,429 @@
+# 3. Exploratory data analysis
+---
+
+```{r, echo = FALSE, message = FALSE}
+source(here::here("scripts/setup.R"))
+```
+
+## 3.1 Covid cases in Italy
+
+\
+
+```{r, echo=FALSE, fig.width=5, fig.height=4, results='hide', fig.keep='high', fig.show='asis'}
+year_ref <- 2021
+
+map_italy <- gisco_get_nuts(
+  year = year_ref,
+  resolution = 20, 
+  nuts_level = 2,
+  country = "Italy") %>%
+  select(NUTS_ID, NAME_LATN)
+
+st_geometry(map_italy)
+
+
+# Transform the shape
+map_italy1 <- st_transform(map_italy)
+
+st_geometry(map_italy1)
+
+
+map_italy1 <- map_italy1 %>%
+  dplyr::rename(region=NAME_LATN) 
+
+map_italy1 <- map_italy1 %>%
+  arrange(region)
+
+map_italy1 [13, 2] <- "Provincia Autonoma Bolzano / Bozen"
+map_italy1 [14, 2] <- "Provincia Autonoma Trento"
+map_italy1 [20, 2] <- "Valle d'Aosta / Vallée d'Aoste"
+```
+
+
+```{r, echo=FALSE, fig.width=5, fig.height=4}
+map_italy_data <- map_italy1 %>%
+  left_join(vaccination_region, by = c("region"))
+
+plot(map_italy_data[, "cases_ratio"],
+     breaks = "jenks",
+     nbreaks = 10,
+     pal = hcl.colors(10),
+     main = "Covid Cases in Italy")
+
+
+```
+
+
+Before observing and making assumptions about the Italian vaccination campaign, it is necessary to focus on the **trend** of the coronavirus epidemic in the country. The following graph shows how the regions have been affected by the virus in a **"non-compliant"** way: the different colors represent in fact the number of Covid cases per region in relation to the number of the population *(updated to the last population census of January 1, 2021)*. This representation is consistent with the events that occurred at the beginning of 2020: if it is true that the first two cases on Italian soil were registered in the city of Rome (Lazio), these were attributable to tourists who presumably had less close contact with the outside world. 
+
+
+<style>
+div.blue { background-color:#e6f0ff; border-radius: 5px; padding: 20px;}
+</style>
+<div class = "blue">
+
+The "patient zero" of Italian nationality was identified on [February 21, 2020 at the Hospital of **Lodi (Lombardia)**](https://www.regione.lombardia.it/wps/portal/istituzionale/HP/lombardia-notizie/DettaglioNews/2020/02-febbraio/17-23/coronavirus-in-lombardia-tutti-gli-aggiornamenti-in-diretta) and only one day later the existence of [an outbreak in **Vo' (Veneto)**](https://www.regione.veneto.it/article-detail?articleId=4281001) was brought to light. As a matter of fact, Northern regions have a much clearer coloration than the rest of the country.
+
+</div>
+
+\
+
+## 3.2 Covid deaths in Italy
+
+\
+
+```{r, echo=FALSE, fig.width=5, fig.height=4}
+
+plot(map_italy_data[, "death_ratio"],
+     breaks = "equal",
+     nbreaks = 10,
+     pal = hcl.colors(10),
+     main = "Covid Deaths in Italy") 
+
+```
+
+
+The considerations made in Graph 1 are reflected in the second, which, following the same methodology, shows how the number of deaths in relation to the population is higher in the regions of Northern Italy, where the greatest number of cases has been recorded overall. **The entry of the virus earlier in those areas of the country has influenced the number of deaths recorded to date**. 
+
+\
+
+## 3.3 A different perspective on Covid cases in Italy
+
+\
+
+```{r, echo=FALSE, fig.width=5, fig.height=4}
+
+#Andamento Interattivo casi covid e morti covid
+
+i1 <- grepl("^[0-9]{4}", df.regional.covid$date)
+v1 <- as.Date(df.regional.covid$date[i1])
+df.regional.covid$date <- v1
+
+df.regional.collapsed <- df.regional.covid %>%
+  group_by(date) %>%
+  summarise_if(is.numeric, sum, na.rm = TRUE)
+
+# Xts necessario per usare dygraph
+casi <- xts(x = df.regional.collapsed$new_positives, order.by = df.regional.collapsed$date)
+
+# Finally the plot
+grafico.casi <- dygraph(casi) %>%
+  dyOptions(labelsUTC = TRUE, fillGraph=TRUE, fillAlpha=0.1, drawGrid = FALSE, colors="#D8AE5A") %>%
+  dyRangeSelector() %>%
+  dyCrosshair(direction = "vertical") %>%
+  dyHighlight(highlightCircleSize = 5, highlightSeriesBackgroundAlpha = 0.2, hideOnMouseOut = FALSE)  %>%
+  dyRoller(rollPeriod = 1)
+
+grafico.casi
+
+
+```
+
+\
+
+Departing from the regional trend, this interactive chart *(it is possible to navigate between all the dates observed by means of the bar below the chart)* shows the trend of covid cases from the [first day in which the tracking was started, 25/02/2020,](https://www.salute.gov.it/portale/nuovocoronavirus/dettaglioContenutiNuovoCoronavirus.jsp?lingua=english&id=5367&area=nuovoCoronavirus&menu=vuoto) until today, as data are constantly updated. The interactivity allows the observer to make numerous considerations about both the progress of the Italian epidemic and the effectiveness of the measures put in place. Following a chronological order, the first interesting data is recorded on **March 21, 2020,** when the epidemiological curve *(represented here by the daily trend)* began to decrease, underlining how the lockdown measures taken by the Italian government first in February for the northern regions and then [**on March 9, 2020**](https://www.gazzettaufficiale.it/eli/id/2020/03/08/20A01522/sg) for the whole country began to give the first results. On May 4, 2020 and then on June 15, 2020 the measures are progressively loosened: with the arrival of the summer period the infections remain stable until the middle of August. 
+
+
+<style>
+div.blue { background-color:#e6f0ff; border-radius: 5px; padding: 20px;}
+</style>
+<div class = "blue">
+
+The gradual but steady increase will not disturb the souls of the Italians until the beginning of October 2020, when on day ten of the month 5724 cases are recorded. Only 15 days later the cases will be 21273. It is evident that, with the beginning of the autumn season and without preventive measures, the virus finds a much more fertile ground to expand. The pandemic will touch the peak in Italy just nineteen days later, when on November 13 the total daily cases are 40902. The regions are divided into colors according to the epidemiological trend and a curfew is instituted from 22:00 to 5:00. We will return to the data in this chart later, as between December 2020 and January 2021 Italy kicked off its immunization campaign.
+
+</div>
+
+\
+
+## 3.4 What about Covid-related deaths?
+
+\
+
+```{r, echo=FALSE, fig.width=5, fig.height=4}
+
+# Xts necessario per usare dygraph
+morti <- xts(x = df.regional.collapsed$deaths, order.by = df.regional.collapsed$date)
+
+# Finally the plot
+grafico.morti <- dygraph(morti) %>%
+  dyOptions(labelsUTC = TRUE, fillGraph=TRUE, fillAlpha=0.1, drawGrid = FALSE, colors="#D8AE5A") %>%
+  dyRangeSelector() %>%
+  dyCrosshair(direction = "vertical") %>%
+  dyHighlight(highlightCircleSize = 5, highlightSeriesBackgroundAlpha = 0.2, hideOnMouseOut = FALSE)  %>%
+  dyRoller(rollPeriod = 1)
+
+grafico.morti
+```
+
+
+The graph relating to deaths in Italy from covid-19 follows the same temporal setting of Graph 3. In this case the reading of the data is almost similar, but data emerge that differ slightly from what has been seen so far. If the restrictive measures applied by the government *(which, as we recall, begin - at the national level - on March 9, 2020)* take about 20 days to "influence" the trend of the contagion, the same does not apply to the ratio of restrictions - deaths. In fact, to observe a stabilization in the number of deaths from covid-19 we had to wait until mid-May 2020. Overall, however, **the arrival of the summer period seems to have had also in this case a positive effect on the reduction of deaths** as observed for cases (it is further reiterated that these considerations are based on the fact that in that period there were no restrictions in place, not at least in terms of freedom of movement on Italian soil).
+
+\
+
+## 3.5 Cases vs. Deaths & Swabs vs. Cases (Interactive Bubble Charts)
+
+\
+
+```{r, echo=FALSE, fig.width=5, fig.height=4}
+#Bubble Graph Deaths/Cases per Region 
+
+df.total.per.region <- df.total.per.region %>%
+  left_join(df_pop, by="region") 
+
+library(ggplot2)
+library(plotly)
+
+f.region <- vaccination_region %>%
+  ggplot( aes(cases_ratio, death_ratio, size = tot_pop, color=region)) +
+  geom_point() +
+  theme_bw() +
+  ylab("Deaths ratio") +
+  xlab("Cases Ratio")
+
+ ggplotly(f.region)
+
+pp <- vaccination_region %>%
+  ggplot( aes(cases_ratio, swabs_ratio, size = tot_pop, color=region)) +
+  geom_point() +
+  theme_bw() +
+  ylab("Swabs Ratio") +
+  xlab("Cases Ratio")
+
+ ggplotly(pp)
+
+```
+
+\
+
+The following charts are presented in pairs because we believe it is important to compare the data contained within them. The first (graph 5) shows how there is a **positive correlation between the number of cases and the number of deaths**, once again underlining the gap between the regions of the north and the regions of the center-south in terms of cases and deaths. There is, however, a consideration to be made: if the deaths of this pandemic are a number that hardly differs from reality *(people with serious symptoms are taken to the emergency rooms where a swab is made for diagnosis)*, the same statement does not apply to cases. This is due to the fact that not all people affected by covid-19 manifest a symptomatology such as to require hospitalization, let alone always present some symptomatology *(the phenomenon of the so-called asymptomatic)*. From this consideration we can deduce that another data that takes on particular importance is to be found in the number of swabs carried out per region and this leads us to the second graph (graph 6). Also in this graph there is a positive correlation between the number of cases and the number of swabs which is, in a certain sense, obvious: the more people who are covid positive, the more are found. 
+
+<style>
+div.blue { background-color:#e6f0ff; border-radius: 5px; padding: 20px;}
+</style>
+<div class = "blue">
+
+
+It is in these terms that the data presented above *(i.e., those showing that the northern regions were the most affected)* take on different contours: it is still true that the pandemic began in those regions, but it is also true that these are the ones that have carried out the greatest number of swabs on the population. Consequently, the data from the regions of Northern Italy on contagion are certainly more indicative than those of the South. There is a clear outlier in these representations, namely the Autonomous Province of Bolzano/Bozen. We refer to the end of this chapter, more specifically in section 3.10 , for considerations on this issue.  
+
+</div>
+
+\
+
+## 3.6 Vaccination Campaign in Italy: a winning approach?
+
+\
+
+```{r, echo=FALSE, fig.width=5, fig.height=4}
+
+df_vax_collapsed <- df_vax %>%
+  group_by(data_somministrazione) %>%
+  summarise_if(is.numeric, sum, na.rm = TRUE)
+
+df_vax_collapsed <- df_vax_collapsed[-c(2, 3)]
+
+
+i1 <- grepl("^[0-9]{4}", df_vax_collapsed$data_somministrazione)
+v1 <- as.Date(df_vax_collapsed$data_somministrazione[i1])
+df_vax_collapsed$data_somministrazione <- v1
+
+# Xts necessario per usare dygraph
+prime.dosi <- xts(x = df_vax_collapsed$prima_dose, order.by = df_vax_collapsed$data_somministrazione) 
+
+# Grafico
+z <- dygraph(prime.dosi) %>%
+  dyOptions(labelsUTC = TRUE, fillGraph=TRUE, fillAlpha=0.1, drawGrid = FALSE, colors="#D8AE5A") %>%
+  dyRangeSelector() %>%
+  dyCrosshair(direction = "vertical") %>%
+  dyHighlight(highlightCircleSize = 5, highlightSeriesBackgroundAlpha = 0.2, hideOnMouseOut = FALSE)  %>%
+  dyRoller(rollPeriod = 1)
+z
+
+
+# Xts necessario per usare dygraph
+seconde.dosi <- xts(x = df_vax_collapsed$seconda_dose, order.by = df_vax_collapsed$data_somministrazione) 
+
+# Grafico
+l <- dygraph(seconde.dosi) %>%
+  dyOptions(labelsUTC = TRUE, fillGraph=TRUE, fillAlpha=0.1, drawGrid = FALSE, colors="#D8AE5A") %>%
+  dyRangeSelector() %>%
+  dyCrosshair(direction = "vertical") %>%
+  dyHighlight(highlightCircleSize = 5, highlightSeriesBackgroundAlpha = 0.2, hideOnMouseOut = FALSE)  %>%
+  dyRoller(rollPeriod = 1)
+l
+
+
+```
+
+Graphs 7 and 8 show respectively the trend of the Italian vaccination campaign for the second and first dose. This started on **December 27, 2020**, with the administration of **7313 first doses**, while the vaccination through the second doses started on **January 17, 2021**, with **2987 doses**. From the trend of the two graphs it is clear that Italy has opted for a vaccination plan focused on the administration of both the highest number of first doses and booster doses, or second doses, compared to the supplies of pharmaceutical companies. The data contained in graph 8 refer to all types of vaccine administered *(Janssen, Moderna, Pfizer and Vaxzevria)*, while graph 7 takes into consideration only those vaccines that are administered in two doses *(Moderna, Pfizer and Vaxzevria)*. The numerical evidence of the assumption made above, i.e. the approach that Italy has adopted towards the vaccination campaign, can be found in the "peaks" that can be observed: for the first dose, this was recorded on June 4, 2021, while for the second doses only one month later, i.e. on July 15, 2021. 
+
+
+```{r, echo=FALSE}
+
+novembre.2020 <- read.csv(url("https://raw.githubusercontent.com/pcm-dpc/COVID-19/master/dati-andamento-nazionale/dpc-covid19-ita-andamento-nazionale-20201110.csv"))
+
+novembre.2021 <- read.csv(url("https://raw.githubusercontent.com/pcm-dpc/COVID-19/master/dati-andamento-nazionale/dpc-covid19-ita-andamento-nazionale-20211110.csv"))
+
+novembre.2020 <- novembre.2020 %>%
+  select(-c(12:20)) 
+
+novembre.2021 <- novembre.2021 %>%
+  select(-c(12:24)) 
+
+total <- rbind(novembre.2020, novembre.2021)
+
+total <- total %>% dplyr::rename(date=data, 
+                                 country=stato,
+                                 hospitalized_with_symptoms=ricoverati_con_sintomi,
+                                 intensive_care=terapia_intensiva,
+                                 total_hospitalised=totale_ospedalizzati, 
+                                 quarantined=isolamento_domiciliare,
+                                 total_positives=totale_positivi, 
+                                 total_variation_of_positive_cases=variazione_totale_positivi,
+                                 new_positives=nuovi_positivi,
+                                 discharged_from_hospital=dimessi_guariti,
+                                 deaths=deceduti)
+                                                      
+kable(total)%>%
+  kable_styling(font_size = 14)%>%
+  scroll_box(width = "900px", height = "170px")
+    
+                          
+```
+\
+
+<style>
+div.blue { background-color:#e6f0ff; border-radius: 5px; padding: 20px;}
+</style>
+<div class = "blue">
+
+
+At the moment, this strategy seems to have been somewhat correct: **on November 10 of last year 35098 cases were recorded** in Italy, while **on the same day of 2021 the cases are just 7891**, with **only 3870 people currently hospitalized**. On the same day **a year ago they were 31604**. We can therefore say that the vaccination campaign has played a central role in easing the pressure on the national health system (SSN) that, in 2020, seemed to be on the verge of collapsing. 
+
+</div>
+
+\
+
+## 3.7 (Cont'd) Vaccination Campaign in Italy: a winning approach?
+
+```{r, echo=FALSE, fig.width=7, fig.height=7}
+
+h <- ggplot(app_vax, aes(x=date, y=vaccines, group=producer, color= producer)) +
+  geom_line() +
+  scale_fill_viridis(discrete = TRUE) +
+  theme(legend.position="none") +
+  ggtitle("Vaccine Shipments per Producer") +
+  theme_ipsum() +
+  theme(
+    legend.position="none",
+    panel.spacing = unit(0.1, "lines"),
+    strip.text.x = element_text(size = 10)
+  ) + 
+  facet_wrap(~producer, scale="free_y")
+h
+
+```
+
+As shown in graph 9 above, the analysis of the Italian vaccines-acquisition policy shows how **the government is relying on mRna based technology vaccines**. Infact, what is shown here is a substantial letup in the number of doses available to be injected regarding the Janssen vaccine and the Vaxzevria one. In the Janssen case, this is mainly due to the fact that the Ministry of Health *(in accordance with the European Union)* has decided before and during the campaign to not purchase big amounts of this product. Moreover - according to the scientific world - it is not as effective as the other vaccines, but this is merely a consideration as our goal is not investigate these complicated "issues". 
+
+<style>
+div.blue { background-color:#e6f0ff; border-radius: 5px; padding: 20px;}
+</style>
+<div class = "blue">
+
+
+On the other hand, the Vaxzevria case in more interesting. It is clear from the graph that initially there was a high demand of such product by the italian authorities, with a rapid change of trend at the beginning of July. If we analyze what was happening back in these days, the public opinion was harshly questioning AstraZeneca's product efficacy and safety, leaving fertile ground for mass hysteria, as people started refusing the swedish-british compound. From this moment on, fate was sealed for AZ, with the italian Goverment deciding to devolve the doses that were still kept in freezers to the Covax program.
+
+</div>
+
+\
+
+## 3.8 Income per Region
+
+```{r, echo=FALSE, fig.width=5, fig.height=4, warning=FALSE}
+
+df_income %>% 
+  mutate(region = fct_reorder(region, Income)) %>%
+  ggplot( aes(x=region, y=Income)) +
+  geom_bar(stat="identity", fill="#f68060", alpha=.6, width=.4) +
+  coord_flip() +
+  xlab("Region") +
+  ylab("Median Income") +
+  theme_bw()
+
+```
+
+The graph above shows how the regions of the north and especially the center are richer than those of the south. Precisely this greater wealth of those areas of the north and center have allowed the regions in question to put in place more efficient contact tracing campaigns, which provide as a final result a percentage of positive compared to the population obviously higher than the **southern regions, "lazier" in this respect**. Another fact that has previously emerged clearly from our analysis is that, looking at the data on education, there is a large disparity between North and South. We are not going to try to provide explanations for this evidence because it is not the objective of this paper, but we refer the reader to an in-depth study of the so-called "southern question". 
+
+\
+
+## 3.9 Overview of ratio factors in the final df as Heathmap 
+
+```{r, echo=FALSE, fig.width=5, fig.height=4, warning=FALSE}
+
+vaccination_region1 <- vaccination_region %>%
+  arrange(area)
+
+mat <- vaccination_region1
+rownames(mat) <- mat[,1]
+mat <- mat %>% dplyr::select(-region, -area,-second_dose, -janssen, -deaths, -total_cases, -swabs, -news_read)
+mat <- as.matrix(mat)
+
+
+
+k <- heatmaply(mat, 
+               dendrogram = "none",
+               xlab = "Variables found in the investigation", ylab = "Italian regions", 
+               main = "Overview of all considered factors as heatmap",
+               scale = "column",
+               margins = c(60,100,40,20),
+               grid_color = "white",
+               grid_width = 0.00001,
+               titleX = FALSE,
+               hide_colorbar = TRUE,
+               branches_lwd = 0.1,
+               label_names = c("Region", "Feature", "Value"),
+               fontsize_row = 8, fontsize_col = 8,
+               labCol = colnames(mat),
+               labRow = rownames(mat),
+               heatmap_layers = theme(axis.line=element_blank())
+)
+
+k
+```
+ 
+ 
+With the heathmap presented above, our goal is to provide a view of the final data frame - at the regional level - that is even clearer than what has been said so far. Before presenting our considerations, we would like to underline how this heathmap should be read: lighter colors *(e.g. yellow)* represent a data that deviates positively from the general trend of that variable for the 21 regions considered. On the contrary, colder colors *(e.g. purple)* indicate a value that deviates negatively from the trend. In fact, in the processing of the Heathmap, the software proceeds to a normalization of the same, to make effective visualization. On our side instead, we have **modified the order** in which the regions are arranged with respect to the final data frame "vaccination_region": in this case, **it is useful to group them by geographical areas** *(in this case the order is Center, North, South, from the top to the bottom of the map)*. We note once again how the data of the North first and then of the Center are different from those of the South: this strengthens the assumption made at the beginning of this document, that the spread of **the pandemic has occurred "cascade"**, or from North to South, thus giving rise to **results that - to date - are not homogeneous**. In spite of this, also this chart supports the hypothesis that **the regions of the North have reacted in a more efficient way in the so-called contact tracing** *(that is, the number of swabs carried out as a percentage of the population)*.
+
+<style>
+div.blue { background-color:#e6f0ff; border-radius: 5px; padding: 20px;}
+</style>
+<div class = "blue">
+
+
+With respect to the vaccination campaign, the map shows how some regions of Southern Italy *(Sicily, Campania and Calabria)* are lagging behind those of the Center-North. The distribution of colors in the map also highlights another interesting factor, namely how **the most affected regions (north) have higher rates of vaccination than those in the south**, touched less by the infection. It also seems that **the ratio of cases/population has influenced the willingness of the regions to expand their testing campaigns**: once again, in the center and especially in the north, swabs carried out on the population are much more numerous. 
+
+</div>
+
+\
+
+## 3.10 Our findings so far
+
+\
+
+Considering all the steps of the analysis we have seen from the beginning of this work until now, we can make a summary of the considerations and evidence we have crossed so far. Concerning the course of the coronavirus epidemic in the Italian peninsula, which has had a **non-conforming trend** among the various regions and that we explain with the entry and tracing of the first cases of coronavirus in those northernmost regions that, representing the **most "economically exposed" part of the country**, were more subject to frequent travel from the areas of the world where the contagion began.
+
+We have noticed how these data seem - at first glance - to play a role in the **vaccination campaign, which proceeds more rapidly in the northern part of the country**. The Italian vaccination campaign seems to have been effective to date, despite the various "problems" that have arisen and exposed above, such as the case of the "short-circuit information" on the vaccine AstraZeneca. Despite everything, the current state of the vaccination campaign can be evaluated positively, especially if we take into account the large population of the individual regions. Obviously, there are some that have lagged behind the average vaccine/population ratio held by Italy, and so far we have highlighted the first evidence found using factors such as income and education. We will try to highlight these data even better as the project progresses. For more in-depth considerations on the vaccination campaign, we invite you to refer to the specific paragraphs above.
+
+<style>
+div.blue { background-color:#e6f0ff; border-radius: 5px; padding: 20px;}
+</style>
+<div class = "blue">
+
+As a final point, we feel it is important to emphasize how at several points in our analysis the **Autonomous Province of Bolzano/Bozen is an outlier** compared to all other Italian regions. Such different data, **especially regarding the number of swabs performed** *(the ratio of swabs/population is 4.5)* could be explained by the **geographical location of the Autonomous Province of Bolzano/Bozen**. This is in fact the most important crossroad in Italy for the movement of goods which, we must remember, has undergone a drastic decrease in daily values, but never a halt. Let's suppose, then, that precisely because of the need to prevent covid-positive subjects employed in this sector from moving from Italy to Austria and the rest of Europe *(or vice versa)*, the testing centers had a very high influx of users. Nevertheless, this is the first explanation that we feel we can give and that can be integrated in the future.
+
+</div>
+
+\
+\
+\
+

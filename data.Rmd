@@ -1,0 +1,501 @@
+# 2. Data
+
+```{r, echo = FALSE, message = FALSE}
+source(here::here("scripts/setup.R"))
+```
+
+## 2.1 Sources
+The majority of data have been taken from the Official **ISTAT** website. ISTAT is a complete and national data warehouse that Italian experts, statisticians, and scholars use for their daily analysis.
+Some data about **COVID** measures have also been taken from the data world website. We took this choices as data were exactly the same provided by the Italian government, but with the useful differences of being presented jointly in a daily format, which is more practical in terms of future analysis.
+As follows we report the links where we have taken some of the variables of interest for our current analysis:
+
+|  | **Pool of useful Dataframe links** |  |
+|--- |--- |--- |
+| [Vaccination Dataframe](https://raw.githubusercontent.com/italia/covid19-opendata-vaccini/master/dati/somministrazioni-vaccini-latest.csv) | [Inequality Dataframe](http://dati.istat.it/Index.aspx?QueryId=598#) | [Covid Dataframe](https://data.world/gbvitrano/test-covid-19/workspace/file?filename=dpc-covid19-ita-andamento-nazionale.json) |
+| [Political Information Channels Dataframe](http://dati.istat.it/Index.aspx?QueryId=24368&lang=en) |  [Vaccine Shipments to Italy Dataframe](https://raw.githubusercontent.com/italia/covid19-opendata-vaccini/master/dati/consegne-vaccini-latest.csv) | [Employment Dataframe](//dati.istat.it/Index.aspx?QueryId=25132) | [Educational Level Dataframe](http://dati.istat.it/Index.aspx?QueryId=26176&lang=en)| [Population Dataframe](http://dati.istat.it/Index.aspx?DataSetCode=DCIS_POPRES1) |
+| [Educational Level Dataframe](http://dati.istat.it/Index.aspx?QueryId=26176&lang=en) | [Population Dataframe](http://dati.istat.it/Index.aspx?DataSetCode=DCIS_POPRES1) | [Income Dataframe](http://dati.istat.it/Index.aspx?QueryId=11483#) |
+
+
+## 2.1.1 Description
+Our Analysis finds its main pillars in a pool of 9 different tables, concerning some of the macro areas of interest going from covid and vaccination in a broad sense to some more explanatory variables regarding the regional GDP, the poverty rate, the measure of inequality of individuals, the employment level, the educational level, etc.
+
+A first overview in our pool of datasets is presented as follow and may serve as reference for the next sections of the analysis which go more deeply into the research question.
+
+
+| |Some insights|  |
+|--- |--- |---|
+| **Vaccine Dataset** contains 140305 observations and 15 total columns| **Gini Index of inequalities** table contains 55 Entries and 14 Total Columns| **Covid Dataset** contains 12,706 entries and 31 total columns | 
+**Main Channels of information**  includes 1,729 entries, 11 total columns | **Vaccine Shipments to Italy Dataframe** contains 5201 observations and 5 columns |**Occupational Level table** exhibit 7,898 entries, 15 total columns | 
+**Education Level Dataset** contains 1,585 entries, 17 total columns  | **Population Dataset** contains 21 entries in 15 total columns  | **Income Dataset** contains 21 entries and 13 columns | 
+
+
+Some of the datasets such as the Population and the poverty ones, contain fewer observations since data are presented in macro aggregated areas and no more at a regional-specific level (south, north, center, islands), thus a certain degree of data wrangling, in terms of macro-aggregation, will be required in dealing with this variable. Still, we consider it very valuable as southern Italian regions and northern Italian regions tend to exhibit similar features within each sub-group respectively.
+
+Last, we report some of the relevant variables that we think could be a good starting point to work with as follows:
+
+|  | |Incoming Familiar Variables| | |
+|---|---|---|---|---|
+| age_group  | area  |date|  gender_sex |region   |
+|  producer |  vaccine_furniture | first_dose  | second_dose  | total_hospitalised  |
+| total_positive  |  new_positive | death  | total_cases  | swabs  |
+| death_ratio  |  swab_ratio | mortality_rate  | studies_title  | employment_rate  |
+| gini_index  | vax_ratio  | tot_population  | tot_no_education_ratio  | tot_graduated_ratio  |
+
+> **_Note:_** we have changed the name of some variables to ease the understanding)
+
+\
+
+## 2.2 Wrangling and cleaning
+### 2.2.1 [Vaccination Dataframe](https://raw.githubusercontent.com/italia/covid19-opendata-vaccini/master/dati/somministrazioni-vaccini-latest.csv)
+
+We started our analysis by focusing our attention on the pool of data grouping the individuals subjected to two doses of vaccination or to a single dose of the Jonsson vaccine. Our purpose was, in fact, to find a suitable proxy of the overall number of completely vaccinated subjects. 
+
+```{r, echo=TRUE}
+df_vax <- read.csv(url("https://raw.githubusercontent.com/italia/covid19-opendata-vaccini/master/dati/somministrazioni-vaccini-latest.csv"))
+df_vax <- df_vax %>%
+  select(-c(3,4, 9:13)) 
+df_janssen <- df_vax %>% 
+  filter(fornitore=="Janssen")
+
+second_dose <- aggregate(df_vax$seconda_dose, by=list(area=df_vax$nome_area), FUN=sum)
+janssen_dose <- aggregate(df_janssen$prima_dose, by=list(area=df_janssen$nome_area), FUN=sum)
+```
+
+In order to study the heterogeneity of the vaccination campaign we further add another geographical distinction based on the macro-area of origin of vaccinated subjects. In this case, the command `mutate` fitted our needs.
+
+```{r, echo=TRUE}
+vaccination_region <- second_dose %>% 
+  left_join(janssen_dose, by=("area")) %>%
+  rename(second_dose= `x.x` , janssen=`x.y` , region=area)
+
+vaccination_region2 <- tibble(vaccination_region$region) %>%
+  rename(region=`vaccination_region$region`)%>%
+  mutate(area= c("South", "South", "South", "South", "North", 
+                 "North", "Center", "North", "North",
+                 "Center", "South", "North", "North",
+                 "North", "South", "South", "South",
+                 "Center", "Center", "North", "North")) %>%
+  arrange(area)
+```
+
+We started by creating our very first vaccination dataframe.It contained the aggregate number of vaccinated subjects either with two doses or with the Jonsson vaccine (which require only one shot). Each results was, thus, organized by regions and by macro areas
+
+```{r, echo=TRUE}
+vaccination_region <- vaccination_region %>%
+  left_join(vaccination_region2, by=("region"))%>%
+  relocate(area, .after = region)
+
+```
+
+<style>
+div.blue { background-color:#e6f0ff; border-radius: 5px; padding: 20px;}
+</style>
+<div class = "blue">
+
+***Further insights***: The initial dataset covers the period from the 27 December 2020 to today. As we were interest in computing the summary statistic of the above mentioned variables, we made use of the `aggregate` command; namely, it allowed us to split the data into subsets, compute summary statistics for each, and return the result in a very convenient form.
+
+</div>
+
+\
+
+### 2.2.2 [Covid Dataframe](https://data.world/gbvitrano/test-covid-19/workspace/file?filename=dpc-covid19-ita-andamento-nazionale.json)
+
+As far as the Covid dataframe is concerned, we took the decision of downloading it directly from data.world which provides daily update on the COVID ongoing pandemy in Italy.As before, we eliminated the dataframe columns that for the purpose of our analysis where redundant, renaming the remaining in a more intuitive fashion. The variable of interest in this case were different: from the almost familiar **date**(in a daily format) and **region** to the **total hospitalised cases**, **the total positive**, **the number of new positives**, **the number of death** and **the swabs** done.
+
+```{r, echo=TRUE}
+df.regional.covid <- fromJSON("https://query.data.world/s/r6heradt54t2pjttgjfqumjxp6rhjj")
+
+df.regional.covid = select(df.regional.covid, -2, -3, -(5:8), -10, -12, -14, -16, -17, -(20:30)) %>% 
+  rename(date=data,region=denominazione_regione,total_hospitalised=totale_ospedalizzati,total_positives=totale_positivi, 
+         new_positives=nuovi_positivi,deaths=deceduti,total_cases=totale_casi,swabs=tamponi)
+
+i<-is.na(df.regional.covid)
+ 
+```
+
+As it would have been of big interest working on everly fresh data we made use of the command `slice` after having it `arranged` by descending date. Note that now we have been able to obtain yearly aggregated values from daily ones which, for the purpose of our future analysis, will be crucial.
+
+```{r, echo=TRUE}
+df.total.per.region <- arrange(df.regional.covid, desc(date))%>% 
+  slice(1:21)
+
+df.total.per.region = select(df.total.per.region, -1,-(3:5)) 
+```
+
+Similarly to the *Vaccination Dataframe*, we have created and added (thanks to `mutate`) a new columns with the variable North-East, North-West, Center and South and with the idea of easing a future merging ultimately summarizing all the information in the same dataframe.
+
+```{r, echo=TRUE}
+df.total.per.region <- df.total.per.region %>% mutate(area = case_when(
+  (region == "Veneto") ~ "North", (region == "Emilia-Romagna") ~ "North", (region == "P.A. Trento") ~ "North", (region == "P.A. Bolzano") ~ "North", (region == "Friuli Venezia Giulia") ~ "North",
+  (region == "Lombardia") ~ "North", (region == "Liguria") ~ "North", (region == "Piemonte") ~ "North", (region == "Valle d'Aosta") ~ "North",
+  (region == "Lazio") ~ "Center", (region == "Marche") ~ "Center", (region == "Toscana") ~ "Center", (region == "Umbria") ~ "Center",
+  (region == "Abruzzo") ~ "South", (region == "Basilicata") ~ "South", (region == "Calabria") ~ "South", (region == "Molise") ~ "South", (region == "Campania") ~ "South", (region == "Puglia") ~ "South", (region == "Sicilia") ~ "South", (region == "Sardegna") ~ "South",)) %>%
+  relocate(area, .after = region)
+
+df.total.per.region [6, 1] <- "Friuli-Venezia Giulia"
+df.total.per.region [12, 1] <- "Provincia Autonoma Bolzano / Bozen"
+df.total.per.region [13, 1] <- "Provincia Autonoma Trento"
+df.total.per.region [20, 1] <- "Valle d'Aosta / Vallée d'Aoste"
+
+df.total.per.region <- df.total.per.region %>% 
+  arrange(region)
+```
+
+\
+
+### 2.2.3 [Employment Level Dataframe](http://dati.istat.it/Index.aspx?QueryId=26176&lang=en)
+
+As far as the Dataset on Employment is concerned, we get rid of redundant columns similarly as before. For the purpose of the analysis, we decided to keep the variables accounting for: **regions**, **age class**, **study title** and,the one of highest interest, the value standing for the **Employment level**. As the dataset contained also aggregated values, we cleaned it and `filtered` for specific region only and for the age class of highest interest, namely the one grouping subjects from 15 to 64 years old. 
+
+```{r, echo=TRUE}
+
+df.oc <- read.csv("../data/TassoOccupazione.csv")
+df.oc <- df.oc %>% select(-c(1, 3:5, 7, 9, 12, 14, 15)) %>%
+  dplyr::rename(
+    region = Territorio,
+    sex = Sesso,
+    ageclass = Classe.di.età,
+    studytitle = Titolo.di.studio,
+    oc_level = Value
+  )
+
+p <- is.na.data.frame(df.oc)
+
+df.regions <-
+  df.oc %>% filter(
+    !(
+      region == "Italia" |
+        region == "Nord" |
+        region == "Nord-est" |
+        region == "Nord-ovest" |
+        region == "Centro" |
+        region == "Mezzogiorno" |
+        region == "Sud"
+    ),
+    ageclass == "15-64 anni" ,
+    TIME == "2019" | TIME == "2020"
+  ) %>%
+  mutate(time = as.numeric(TIME))
+```
+
+We then argued that a good summary variable for average employment would have been to compute the mean employment level among educational level classes and within region. In doing this, we made use of the command `summarise` after having `grouped by` regions and time. Notice that, as our analysis will be based on 2020 vaccination campaign, we chosed to keep only 2020 values. 
+```{r, echo=TRUE}
+df_occ <- df.regions %>%
+  filter(!TIME == "2019",!region == "Trentino Alto Adige / Südtirol") %>%
+  select(region, studytitle, oc_level, TIME) %>%
+  group_by(region, TIME) %>%
+  summarise_at(vars(oc_level), list(m_oc_reg = mean)) %>%
+  arrange(desc(m_oc_reg)) %>%
+  pivot_wider(names_from = TIME, values_from = m_oc_reg) %>%
+  dplyr::rename(occ_level = "2020")
+```
+
+\
+
+### 2.2.4 [Inequality Dataframe](http://dati.istat.it/Index.aspx?QueryId=598#)
+
+Inequality Dataset was not big, but it was full of useful information. After having loaded it and selected for the information we where looking for(**region**, **macro areas** and **gini index**) we filtered for the information corresponding to including imputed rents only, as it would better reflect a proxy for inequalities between Italian regions.  
+
+```{r, echo=TRUE}
+df_gini <- read.csv("../data/IndiceGini.csv") 
+
+df_gini<- df_gini%>%
+  select(c(2,8,9,11))%>% 
+  filter(!(Including.or.not.including.imputed.rents=="not including imputed rents"| Territory=="Italy"| 
+             Territory=="Centro (I)"|Territory=="Isole"| Territory=="Sud"| 
+             Territory=="Nord-ovest"| Territory=="Nord-est")) %>% 
+  arrange(Territory) %>% 
+  dplyr::rename(region=Territory)
+
+
+df_gini2 <- tibble(df_gini$region)
+
+df_gini2["area"] <- c("South", "South", "South", "South", "North", 
+                      "North", "Center", "North", "North",
+                      "Center", "South", "North", "North",
+                      "North", "South", "South", "South",
+                      "Center", "Center", "North", "North")
+
+df_gini2 <- df_gini2 %>%
+  dplyr::rename(region=`df_gini$region`)
+
+df_gini <- df_gini %>%
+  select(-c(2,3)) %>%
+  left_join(df_gini2, by=("region")) %>%
+  relocate(area, .after = region)%>%
+  dplyr::rename(gini_index=Value)
+
+```
+<style>
+div.blue { background-color:#e6f0ff; border-radius: 5px; padding: 20px;}
+</style>
+<div class = "blue">
+
+***Further insights***: The Gini index, or Gini coefficient, is a measure of the distribution of income across a population developed by the Italian statistician Corrado Gini in 1912. The most updated measure of inequality we found for Italian regions is the one provided by the ISTAT official portal. Note that it corresponded to the year 2018, so do not contains effect of the ongoing pandemy. We still decided to use it as the COVID crisis affected almost uniformly the economy of the Italian regions, so that using a pre-COVID measure, would have not consituted a relevant bias.
+
+</div>
+
+\
+
+### 2.2.5 [Population Dataframe](http://dati.istat.it/Index.aspx?DataSetCode=DCIS_POPRES1)
+The amount of work we did in this dataframe was to some extent small, but it ended up being very precious for the purpose of the analysis. In fact, having a variable accounting for the regional population is fundamental while comparing different results as it allows you to reason in relative terms and not only absolute one, which in some senses may be misguiding.
+
+```{r, echo=TRUE}
+df_pop <- read.csv("../data/Popolazione.csv") %>%
+  select(-c(1, 3:12, 14, 15)) %>%
+  dplyr::rename(region = Territory, tot_pop = Value)
+```
+
+\
+
+### 2.2.6 [Educational Dataframe](//dati.istat.it/Index.aspx?QueryId=25132)
+The dataframe on Education plays an important role in displaying the level of Educational Attainment by region. We decided to focus on the population 15 years and over and to the usual 2020 period.Notice that we converted the values of educated people in thousands for simplicity of visualization. 
+We have also filtered away some of the rows like "Trentino Alto Adige / Südtirol"that have already been accounted for when considering indipendently the "Provincia Autonoma Bolzano / Bozen from the Provincia Autonoma di Trento"
+
+```{r, echo=TRUE}
+df_educ <- read.csv("../data/Education.csv")
+df_educ <- df_educ[-c(1, 3, 5, 7:9, 11, 12, 14, 16, 17)] %>%
+  filter(
+    !(
+      Gender == "total" |
+        Highest.level.of.education.attained == "total" |
+        Territory == "Trentino Alto Adige / Südtirol"
+    )
+  ) %>%
+  dplyr::rename(
+    ed_people = Value,
+    ed_level = Highest.level.of.education.attained,
+    Time = TIME,
+    region = Territory
+  )
+
+df_educ["ed_people"] = df_educ["ed_people"] * 1000
+```
+
+As we were interested in people having reached an higher level of education, we also filtered for the ones who have successfully completed a tertiary level of specialization. As in the previous sections we group by region and when the time was 2020.
+
+```{r, echo=TRUE}
+df_educ1 <- df_educ %>%
+  filter(ed_level == "tertiary (university, doctoral and specialization courses)",
+         Time == "2020") %>%
+  group_by(region, Time) %>%
+  summarise(uni_people = sum(ed_people)) %>%
+  pivot_wider(names_from = "Time", values_from = "uni_people") %>%
+  dplyr::rename(tot_graduated = "2020")
+
+education_area <- tibble(df_educ1$region)
+
+education_area["area"] <-
+  c("South","South","South","South","North",
+    "North","Center","North","North","Center",
+    "South","North","North","North","South",
+    "South","South","Center","Center","North","North")
+
+education_area <- education_area %>%
+  rename(region = `df_educ1$region`) %>%
+  left_join(vaccination_region2, by = (c("region", "area")))
+
+df_educ1 <- df_educ1 %>%
+  left_join(education_area, by = ("region")) %>%
+  relocate(area, .after = region)
+```
+
+Furthermore, we also decided to account for non educated people. The coding process and the rationality behind this reasoning are exactly the same as before, with the difference that now the initial filtering was applied to those who had only a primary school certificate.
+
+```{r, echo=TRUE}
+df_educ2 <- df_educ %>%
+  filter(ed_level == "primary school certificate, no educational degree",
+         Time == "2020") %>%
+  group_by(region, Time) %>%
+  summarise(no_ed_people = sum(ed_people)) %>%
+  pivot_wider(names_from = "Time", values_from = "no_ed_people") %>%
+  rename(tot_no_ed = "2020")
+
+```
+
+\
+
+### 2.2.7 [Political Information Channels Dataframe](http://dati.istat.it/Index.aspx?QueryId=24368&lang=en)
+We have decided to included this dataset as we have a big problem in Italy, namely the mechanism of information. The clarity of the Italian Informational channel is not always so shining, to these extent we argued that bad information may discourage people from vaccinating. This dataset concerns the main channels of information through which people inform themselves about political lives. As it is not arguable that political choices shapes our current well being and decision, there may exist a correlation between bad channel of information and lower vaccinations. 
+
+In terms of wrangling, we performed the now familiar selecting process and we filtered for regional specific rows only, as the initial dataset contained also macro area results. Moreover, we filtered for the variable stating the number of Newspaper as it could be a fair proxy for verifiable good channels of information.  
+
+```{r, echo=TRUE}
+df_infochannel<- read.csv("../data/MezziInfo.csv")
+
+df_infochannel_r <- df_infochannel %>% select(-c(1, 3, 5, 8, 10, 11)) %>%
+  filter(
+    !(
+      Territory == "Nord" |
+        Territory == "Nord-est" |
+        Territory == "Nord-ovest" |
+        Territory == "Mezzogiorno" |
+        Territory == "Centro (I)" |
+        Territory == "Italy" |
+        Territory == "10,001 - 50,000 inhab." |
+        Territory == "2,001 - 10,000 inhab." |
+        Territory == "until 2,000 inhab." |
+        Territory == "50,001 inhab. and over"
+    ),
+    Data.type == "newspapers" ,
+    Measure == "thousands value",
+    TIME == "2020"
+  ) %>%
+  mutate(reported_number = Value * 1000) %>%
+  select(-c(3, 5)) %>%
+  filter(
+    !(
+      Territory == "metropolitan area - centre" |
+        Territory == "metropolitan area - suburbs" |
+        Territory == "Trentino Alto Adige / Südtirol" |
+        Territory == "Isole" | Territory == "Sud"
+    )
+  ) %>%
+  select(-c(2)) %>%
+  dplyr::rename(news_read = reported_number, region = Territory)
+```
+
+The newly obtained infochannel dataset will have the following variables: **region**, **Time** and **Newspaper read**.
+
+\
+
+### 2.2.8 [Income per Italian Region](http://dati.istat.it/Index.aspx?QueryId=11483#) 
+
+```{r, echo=TRUE}
+
+df_income <- read.csv("../data/Reddito.csv") %>%
+  select(-c(1, 3, 4, 5 , 6 , 7, 8, 10, 12, 13)) %>%
+  rename(region = Territory, Income= Value) %>%
+  select(!TIME)%>%
+  arrange(Income)
+
+```
+
+
+The dataframe on income by region helps us to determine which Italian regions are most relevant from an economic perspective, helping us to understand whether the wealth factor influences variables such as swabs performed or cases registered (the assumption being that the pandemic entered the "wealthier" regions with greater ease). The operations performed on the dataset were fairly straightforward, namely eliminating redundant columns and reordering the values in descending order.
+
+\
+
+### 2.2.9 [Vaccine Shipments to Italy](https://raw.githubusercontent.com/italia/covid19-opendata-vaccini/master/dati/consegne-vaccini-latest.csv)
+
+```{r, echo=TRUE}
+app_vax <-
+  read.csv(
+    url(
+      "https://raw.githubusercontent.com/italia/covid19-opendata-vaccini/master/dati/consegne-vaccini-latest.csv"
+    )
+  )
+
+app_vax <- app_vax %>%
+  select(-c(5:7)) %>%
+  dplyr::rename(
+    date = data_consegna,
+    region = nome_area,
+    vaccines = numero_dosi,
+    producer = fornitore
+  )
+
+i4 <- grepl("^[0-9]{4}", app_vax$date)
+v4 <- as.Date(app_vax$date[i4])
+app_vax$date <- v4
+
+s <- str(app_vax)
+
+app_vax <- app_vax %>%
+  arrange(area, date) %>%
+  group_by(region, producer)
+```
+
+The dataframe "vaccine shipments" collects within it the data on the supply of vaccines by the Italian Government, with data from December 2020 up to today, the date on which the report is analyzed. In fact, as for the dataset on the covid situation and on the administration of vaccines themselves, we believe it is important to work with constantly updated data, in order to have a clear and precise vision of the scenario in which Italy is moving. At the "operational" level, the dataframe had a structure that did not lend itself well to our needs: we have therefore worked to fix some aspects, listed below. First of all, we have selected the columns of our interest and converted the date from the "character" format to the "date" format, in order to be able to carry out temporal analyses. Then, we rearranged the overall structure of the dataframe in order to be able to perform our analysis more quickly, for example by converting the date format from daily to monthly (this operation, however, is reported, in the form of a formula, in the exploratory analysis part of this work) 
+
+\
+
+### 2.2.10 [Poverty Dataframe](http://dati.istat.it/Index.aspx?QueryId=17944)
+
+```{r, echo=TRUE}
+
+df_poverty<-read.csv("../data/Poverta.csv")
+df_poverty<- df_poverty %>% select(-c(1,4,6,8,9)) %>%
+  dplyr::rename(region=Territorio,povertyname=TIPO_DATO8, povertyindex= Value) %>%
+  filter(region=="Nord" | region=="Nord-est" |region=="Nord-ovest"|region=="Centro"|region=="Mezzogiorno", povertyname == "INTENS_POVREL_FAM")
+
+
+r<-df_poverty %>% 
+  filter(povertyname == "INTENS_POVREL_FAM", TIME=="2020") %>%
+  group_by(region, povertyname,TIME) %>%
+  summarise_at(vars(povertyindex), list(m_poverty_ar = mean)) %>%
+  arrange(desc(m_poverty_ar))%>%
+  pivot_wider(names_from = TIME, values_from = m_poverty_ar) 
+
+kable(r)%>%
+  kable_styling(font_size = 14)
+
+```
+
+Poverty Dataframe is a whim of knowledge about the Italian Economical shape. We have mainly used this dataset in order to deepen a clear background idea of how poverty is widespread among italian sub regions. In doing this, we have decided to focus on the measure of relative poverty of families among macro areas.Unsurprisingly, this measure is higher for regions in the south of Italy rather than for the one in the North. A clear symptom of existing divergences within country.
+
+\
+
+## 2.3 The beauty of the final Dataframe
+
+After all this coding work of wrangling, filtering and selecting, we felt the need of reorganizing the ideas.To this aim, we decided to collect all these precious information into a single final dataset. In doing this, we abused the use of the command `leftjoin` which perfectly fitted our needs. Starting from the initial vaccination dataframe, we stacked columns of each variable of interest by regions and by areas of origin.
+
+```{r, echo=TRUE}
+
+vaccination_region <- vaccination_region %>%
+  left_join(df.total.per.region, by = c("region", "area"))
+
+vaccination_region <- vaccination_region %>%
+  left_join(df_educ1, by = c("region", "area"))
+
+vaccination_region <- vaccination_region %>%
+  left_join(df_educ2, by = "region")
+
+vaccination_region <- vaccination_region %>%
+  left_join(df_pop, by = "region")
+
+vaccination_region <- vaccination_region %>%
+  left_join(df_gini, by = (c("region", "area")))
+
+vaccination_region <- vaccination_region %>%
+  left_join(df_occ, by = "region")
+
+vaccination_region <- vaccination_region %>%
+  left_join(df_income, by = "region")
+
+vaccination_region <- vaccination_region %>%
+  left_join(df_infochannel_r, by="region")%>%
+  relocate(TIME, .after = area)
+```
+An interested reader, may now start to see the picture more clearly but there is still some variables which may leave him puzzled. Here it is where the population dataset we loaded in the previous section becomes handy. In fact, it allows to see the real picture in relative terms. We, thus, made use of the command `transform` and added some variables in relative terms which will be the center of our future arguments. The new variables are:  **vaccination ratio** both for Janssen and the 2 doses vaccines, **total relative educated students**, **total relative uneducated student**, **total relative swabs**, **total relative cases**, **total relative death** and **mortality rate**.
+```{r, echo=TRUE}
+vaccination_region <- vaccination_region %>%
+  transform(
+    vax_ratio = second_dose / tot_pop,
+    vax_ratioj = janssen / tot_pop,
+    tot_grad_ratio = tot_graduated / tot_pop,
+    tot_no_ed_ratio = tot_no_ed / tot_pop,
+    income_ratio= Income /tot_pop,
+    swabs_ratio = swabs / tot_pop,
+    cases_ratio = total_cases / tot_pop,
+    death_ratio = deaths / tot_pop,
+    mortality_rate = deaths / total_cases,
+    news_ratio= news_read/tot_pop
+  )
+```
+
+\
+
+***The Final Dataframe***:
+```{r, echo=FALSE}
+#kable(vaccination_region)%>%
+  #kable_styling(font_size = 14)%>%
+  #scroll_box(width = "900px", height = "400px")
+
+DT::datatable(vaccination_region, rownames = TRUE, filter="top", options = list(pageLength = 21, scrollX=T)
+)
+```
+
+\
+\
+\

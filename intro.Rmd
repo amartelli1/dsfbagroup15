@@ -1,0 +1,81 @@
+# 1. Introduction
+
+```{r, echo = FALSE, message = FALSE}
+source(here::here("scripts/setup.R"))
+```
+
+<style> 
+body {
+text-align: justify}
+</style> 
+
+## 1.1 Overview and Motivation
+Nowadays, vaccination is a very common and over-stressed issue worldwide. Vaccinations campaigns seem to be run in very different ways by several countries. There are continuous rising conflicts worldwide about the *fairness of the vaccination campaign* which are undermining the policies adopted by various countries in the attempt of recovering in such a complex post-pandemic situation. Such a *heterogeneous pool of reactions* to the ongoing pandemic is quite peculiar and it calls for some emblematic questions: **why some people seem more willing to get vaccinated, why some countries are struggling in the process? Are there any unconscious beasts in the individual mind preying on their fears?** 
+History teaches us that people's fickleness may be molded in several manners: affecting their educational level, tackling their well-being, limiting their freedom are just a few of the many examples it is possible to extract. 
+
+Focusing on the Italian perspective, the public opinion in recent days is strongly divided on the Italian vaccination campaign, closely linked to the possibility of being able to return to an almost normal life. In fact, there have been numerous demonstrations, which have resulted in violent clashes on more than one occasion. Although the problem seems "trivial", the reality is quite different. Through an articulated system of restrictions and passes (so-called Green Pass), the government led by Prof. *Mario Draghi* has introduced an implicit vaccination requirement, splitting in two both the country and the politics. The social conflict also stems from a polarization due to the Italian media, which have apparently contributed to the creation of a rift between those who are "educated and responsible" and the "ignorant irresponsible", making the choice on whether or not to vaccinate a personal issue and not a social issue. In this climate of social tension, political leaders have not been able to show themselves in front of the population compactly and decisively, often taking *ambiguous attitudes* that - unfortunately - have often resulted in real misinformation not only during the pandemic but also in previous years.
+
+
+>**_Aim:_** The reasons behind the choice of our project question are motivated by the willingness to shed the light on this jungle of nebulous information that people are exposed to while dealing with the very trivial decision of getting vaccinated.
+
+\
+
+## 1.2 Related Work
+**Academic references**:
+
+[Attwell, K., Harper, T., Rizzi, M. et al. Inaction, under-reaction action and incapacity: communication breakdown in Italy’s vaccination governance. Policy Sci 54, 457–475 (2021)](https://doi.org/10.1007/s11077-021-09427-1)
+
+[Lovari, A., Martino, V., & Righetti, N. (2021). Blurred Shots: Investigating the Information Crisis Around Vaccination in Italy. American Behavioral Scientist, 65(2), 351–370](https://doi.org/10.1177/0002764220910245)
+
+[Alessandro Siani, Measles outbreaks in Italy: A paradigm of the re-emergence of vaccine-preventable diseases in developed countries, Preventive Medicine, Volume 121, 2019, Pages 99-104, ISSN 0091-7435](https://doi.org/10.1016/j.ypmed.2019.02.011)
+
+**Today’s politics and vaccination report** :
+
+https://www.nytimes.com/live/2021/10/15/world/italy-covid-green-pass
+
+https://www.reuters.com/world/europe/italian-health-minister-tells-politicians-back-vaccines-2021-07-19/
+
+**Evidences of policies tackling scientific matters** :
+
+https://www.nytimes.com/2017/05/02/opinion/vaccination-populism-politics-and-measles.html
+
+\
+
+## 1.3 Project Objectives
+The purpose of the project is to provide the reader with a wide set of potential tools that a policymaker can use in accessing the efficacy of a specific vaccination campaign. In other words, we will not limit the attention of our research question to the mere descriptive analysis of a single vaccination campaign, already deeply discussed, but rather we would try to put an emphasis on all the factors affecting the well-going of a potential vaccination campaign. 
+Level of education, cultural heritage, political beliefs, people welfare, covid related past experiences is just a few of the different factors we argue that could play a crucial role in shaping people's decision and current belief about the vaccination campaign. *A prescient policymaker should be, thus, able to design an efficient vaccination campaign by taking into account all the sources of potential distress that can arise in a specific situation of interest.*
+In stressing such complex questions we started from the highly specific case of Italy and deeply analyzed the ongoing Italian framework. Italy is showing a very heterogeneous response in the overall vaccination campaign, some regions seem more willing to get vaccinated, some others still struggle. Given the centralized system of vaccination supplies, we may assume there must be some additional and partly hidden factors shaping this willingness to get vaccinated, consequently influencing the well going of the campaign.
+
+>**_Summing up:_**  the project objective does not limit its focus on a descriptive analysis of the ongoing vaccination campaign but, more ambitiously, it tries to shed light on all the factors positively or negatively affecting people's willingness to get vaccinated. 
+
+By starting with the evidence from the *Italian case*, the final outcome would be the proposal of a case-based framework of vaccination policy design accounting for all the correlation factors and potentially implementable to all the other countries worldwide.
+The potential benefits of these types of research questions are big and widespread, especially for those countries which are still lagging behind in the vaccination campaign policy and for the developing countries which have not yet been able to deeply enter in this policy aspect.
+
+>Also, with hindsight bias, the thoughts and the considerations we will deal with, might be of great relevance while facing future pandemic challenges. What could we do next? Is there the possibility to build up a better pandemic plan for the future?
+
+\
+
+## 1.4 Research questions
+The project will be structured as follow: 
+
+**The general framework and background**
+
+- How has Italy been affected by covid-19, both at a national and regional level? What is the ongoing state of the vaccination campaign? Are there any differences between the 20 regions? How can these differences shape people's preferences?
+
+**Getting deeper into the analysis**
+
+- Before the vaccination campaign, the Italian government took on several responsibilities in terms of restrictions with respect to the mobility of citizens, limiting their movements both in time and physically/geographically. Since these are the alternative to mass vaccination, when and how effective are they?
+
+- Starting from the assumption (which will be demonstrated) that some Italian regions have suffered much more heavily from the effects of the pandemic, can we consider the psychological/traumatic aspect as a driver for a greater propensity to vaccination? By looking at the death/case ratio in areas strongly hit by the pandemic, are we able to find a positive correlation with the propensity of getting vaccinated?
+
+- Could we explain a higher propensity to vaccination in the single regions by using the number of graduates of the same area as a proxy for the level of education shown by the individuals?
+
+- Is there a link between the economical situation of the regions and the number of people that decide to get vaccinated? Could wealth and well-being explain people's perceptions?
+
+- Is there a connection between fewer government restrictions and the willingness to get vaccinated? Are people who suffer from social restriction more prone to go against the government? 
+
+- Suppose we use the illiteracy index per region as an indicator of the qualitative variable “cultural differences”. Could this be an explanation of the reasons why people refuse to get vaccinated? 
+
+\
+\
+\

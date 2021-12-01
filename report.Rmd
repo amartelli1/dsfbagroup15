@@ -1,0 +1,14 @@
+---
+title: "Snowball effects on vaccinations: evidences from Italy"
+author: "Andrea Gioia, Alessandro Martelli"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output: 
+  html_document:
+  toc: yes
+  toc_float: yes
+  runtime: shiny
+css: style.css
+---
+
+```{r child = c('intro.Rmd', 'data.Rmd', 'eda.Rmd')}
+```
